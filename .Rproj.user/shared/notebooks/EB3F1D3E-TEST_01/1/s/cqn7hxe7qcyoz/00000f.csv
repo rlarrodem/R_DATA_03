@@ -1,0 +1,4 @@
+"0","Data_AVG_Cl01 <- Data_AVG_Plots %>% filter(M_Cluster==1) %>% arrange(desc(M_Ratio))"
+"0","Data_AVG_Cl02 <- Data_AVG_Plots %>% filter(M_Cluster==2) %>% arrange(desc(M_Ratio))"
+"0","Data_AVG_Cl03 <- Data_AVG_Plots %>% filter(M_Cluster==3) %>% arrange(desc(M_Ratio))"
+"0","Data_AVG_Cl04 <- Data_AVG_Plots %>% filter(M_Cluster==4) %>% arrange(desc(M_Ratio))"

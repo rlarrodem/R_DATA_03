@@ -1,0 +1,5 @@
+"0","PCA_Gral <- princomp(Data_PCA_Gral)"
+"0","PCA_Cl01 <- princomp(Data_PCA_Cl01)"
+"0","PCA_Cl02 <- princomp(Data_PCA_Cl02)"
+"0","PCA_Cl03 <- princomp(Data_PCA_Cl03)"
+"0","PCA_Cl04 <- princomp(Data_PCA_Cl04)"

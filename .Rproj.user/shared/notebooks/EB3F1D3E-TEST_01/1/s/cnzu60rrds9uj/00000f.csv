@@ -1,0 +1,6 @@
+"0",""
+"0","Data_M_Year <- Data01 %>%"
+"0"," group_by(YEAR) %>%"
+"0"," summarize(Imports_Tot= sum(Imports, na.rm = T), GDP_Tot = sum(GDP, na.rm ="
+"0","T)) "
+"0",""

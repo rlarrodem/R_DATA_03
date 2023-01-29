@@ -1,0 +1,1 @@
+"0","Data_Ratios <- replace_na(Data_Ratios, list(Agric_Ratio = 0))"

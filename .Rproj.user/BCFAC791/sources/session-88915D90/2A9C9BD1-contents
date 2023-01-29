@@ -1,0 +1,439 @@
+---
+title: "EXPLORATORY ANALYSIS OF IMPORTS BY COUNTRY"
+author: "Ramon Larrode - ID 0221356307"
+date: "2023-01-07"
+output:
+  html_document:
+    df_print: paged
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    collapsed: False
+    smooth_scroll: true
+    theme: journal
+    highlight: kate
+    code_folding: show
+  word_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+```
+
+```{r libraries, include = FALSE}
+
+# install.packages("scales")
+# install.packages("factoextra")
+# install.packages("NbClust")
+# install.packages("fpc")
+# install.packages("cluster")
+# install.packages("patchwork")
+# install.packages("rgl")
+# install.packages("htmltools")
+
+
+library(tidyverse)
+library(tinytex)
+library(scales)
+library(factoextra)
+library(NbClust)
+library(fpc)
+library(cluster)
+library(patchwork)
+library(rgl)
+library(ggbeeswarm)
+library(readr)
+```
+
+## 1. Abstract
+
+Please download the data set using the following link:
+
+<https://1drv.ms/u/s!ApP3DfxypflKlE3zbVNAqCS_aXcw?e=UsSehj>
+
+This project has been made to describe in a very exploratory way the imports of goods in a general context.
+
+To do this, a detailed data set of Gross Domestic Product 1980 - 2020 (GDP) was downloaded from the official statistics website of the United Nations Conference on Trade and Development - UNCTAD ( <https://unctad.org/statistics>). Figures expressed in Millions of USD (MUSD).
+
+There are many ways and topics about imports that could be described however, this report has as main aim to calculate the average ratio "Imports/GDP" and to identify (if they exist), some characteristics of the countries for whom the imports ratio exceed the global average, and the ones with a lower ratio.
+
+To achieve this goals, this report has been split in 4 parts:
+
+\- Preliminar Data Get and Checking:
+
+\- Ratio Computing
+
+\- Country Clustering
+
+\- Country Comparison
+
+## 2. Preliminar Data Get and Checking
+
+The Original GDP data set is disclosed by year (1980 - 2020), country (254 countries and territories ) and components (Imports, Exports, Industry, Agriculture, etc). However, to calculate the Imports Ratio (M Ratio), it is necessary to define which period would be the best for this purpose. Would it be the most recent year?, or the last 5 years?, or all the available period?, each of them has their own pros and cons. In any case, the idea would be to choose an steady recent period, less impacted for any atypical behavior. To do this, it is going to be visualized the historical trend of imports:
+
+```{r}
+Data01 <- read_csv("C:/Users/milagros/Desktop/R/R_DATA_02/Data/GDP_DATA_FINAL_PLANE.csv")
+```
+
+```{r Imports Data by Year}
+
+Data_M_Year <- Data01 %>%
+ group_by(YEAR) %>%
+ summarize(Imports_Tot= sum(IMPORTS, na.rm = T), GDP_Tot = sum(GDP, na.rm = T)) 
+
+```
+
+```{r Yearly M Ratio Computing}
+
+Data_M_Year <- mutate(Data_M_Year, M_Ratio = 100 * (Imports_Tot / GDP_Tot))
+```
+
+```{r Imports Plotting}
+
+P001 <- ggplot(Data_M_Year, aes(x = YEAR, y = Imports_Tot/1000000, colour = -YEAR, main = "X", show.legend = FALSE)) +
+  geom_line(show.legend = FALSE) +
+  geom_point(show.legend = FALSE) +
+  labs(x = NULL,
+       y = "Imports MMMUSD")
+
+P002 <- ggplot(Data_M_Year, aes(x = YEAR, y = GDP_Tot/1000000, colour = -YEAR, main = "X", show.legend = FALSE)) +
+  geom_line(show.legend = FALSE) +
+  geom_point(show.legend = FALSE) +
+  labs(x = NULL,
+       y = "GDP MMMUSD")
+
+
+P003 <- ggplot(Data_M_Year, aes(x = YEAR, y = M_Ratio, colour = -YEAR, main = "X", show.legend = FALSE)) +
+  geom_line(show.legend = FALSE) +
+  geom_point(show.legend = FALSE)
+
+((P001 | P002) / P003) +
+# add tags and main title
+plot_annotation(tag_levels = 'A',
+title = 'Imports and GDP Historic Trend')
+
+```
+
+The previous plots show that the trends of Imports and GDP remained positive during all the studied period (Plots A and B), however, the Imports Ratio trend shows a notorious change after the financial crash in 2008-2009 . Between 1986 and 2008, The imports Ratio increased up to 30%, however, Between 2008 and 2020 it has been decreasing up to 25%. On this basis, it seems like a recent, steady and non atypical period to focus on, could be 2010 - 2019 (just after the 2008/2009 financial crash, and before the Covid lock down).
+
+```{r Data Filtering}
+Data02 <- filter(Data01, YEAR>2009, YEAR<2020)
+```
+
+```{r Data Average}
+Data_AVG <- Data02 %>%
+  group_by(ID_COUNTRY, COUNTRY_2) %>%
+  summarize(GDP_AVG = mean(GDP, na.rm = T),
+            Imports_AVG = mean(IMPORTS, na.rm = T),
+            Manufact_AVG = mean(MANUFACT, na.rm = T),
+            Minery_Ut_AVG = mean(MIN_UT, na.rm = T),
+            Agric_AVG = mean(AGRIC, na.rm = T),
+            Services_AVG = mean(SERVICES, na.rm = T),
+            Other_AVG = mean(OTHER, na.rm = T),
+            Population_AVG = mean(Population_MM, na.rm = T))
+
+```
+
+```{r Country Names}
+Country_names <- select(Data_AVG, ID_COUNTRY, COUNTRY_2)
+Data_AVG <- select(Data_AVG, -COUNTRY_2)
+```
+
+## 3. Ratio Computing
+
+In this part, the 2010-2019 Imports Ratio (M Ratio) is going to be computed by country, and on this basis it is going to be calculated the Average.
+
+```{r M Ratio Computing by Country}
+Data_AVG <- Data_AVG %>% 
+  mutate(M_Ratio = 100*(Imports_AVG/GDP_AVG)) %>%
+  column_to_rownames(var = "ID_COUNTRY")
+```
+
+```{r Summary of Figures by Country}
+summary(Data_AVG$M_Ratio)
+sd(Data_AVG$M_Ratio)
+```
+
+```{r General Distribution of M Ratio, fig.height=5, fig.width=10}
+
+P004 <- Data_AVG |>
+#filter(!is.na(sex)) |>
+ggplot(aes(y = M_Ratio,
+x = "Total by Country",
+colour = "Total", show.legend = FALSE)) +
+  geom_boxplot(show.legend = FALSE) +
+  geom_quasirandom(dodge.width = 1, show.legend = FALSE) +
+  labs(title = "General Distribution of Imports Ratio", x = NULL)
+
+P004
+
+
+```
+
+A first view of the M Ratio distribution suggests that the annual average ratio of imports per country is 50% respect of their GDP. However, how much does this ratio represent the actual ratios by country?
+
+This question raises since other metrics suggest that the distribution of the ratios is notoriously disperse (Standard Deviation = 28%), biased (Mean = 50% (1) vs Median 44%) and plenty of outliers.
+
+A potential explanation for such distribution could be the difference in the economic structure and size of each country. In other words, characteristics of USA wouldn't be the same than for Somalia.
+
+Then, a more balanced way to calculate the average imports ratio would be grouping countries with similar M ratios. It could be done for example grouping by Quartiles (countries with ratios lower than Q1 in a different cluster than countries with ratios between Q1 and Q2, etc).
+
+However, instead of establishing the thresholds arbitrarily, the idea is to let the data shows which ones would be its natural limits, identifying in this way, more homogeneous groups of countries (in the imports context). To do this, it is going to be used the clustering method "K-Means".
+
+(1) Notice that the Annual Average Imports Ratio shown previously was between 25%-30% because it is a weighted average, whilst the one calculated by country (50%) is computed as an arithmetic mean.
+
+## 4. Country Clustering
+
+Accordingly to Wikipedia (<https://en.wikipedia.org/wiki/K-means_clustering>), k-means clustering is a method of vector quantization, that aims to partition "n" observations into "k" clusters in which each observation belongs to the cluster with the nearest mean (centroid). K-means clustering minimizes within-cluster variances (squared Euclidean distances) (...).
+
+The first step would be identify the "k- value". It means identify an appropriated number of clusters to group the countries. There are several packages in R to look for the optimal "k-value", but for the sake of simplicity it is going to be used "Elbow Method".
+
+Accordingly to Wikipedia post, the method consists of plotting the explained variation as a function of the number of clusters and picking the elbow of the curve as the number of clusters to use (...). ([https://en.wikipedia.org/wiki/Elbow_method\\\_(clustering)](https://en.wikipedia.org/wiki/Elbow_method_(clustering)){.uri}).
+
+```{r Data for Elbow Method}
+Data_M_Ratio <- select(Data_AVG, M_Ratio)
+```
+
+```{r Optimal K for K-Means_Elbow Method}
+fviz_nbclust(Data_M_Ratio, kmeans, method = "wss") +
+ labs(subtitle = "Elbow method suggests 4 clusters")
+
+```
+
+```{r K-Means}
+k_m_4 <- kmeansruns(Data_M_Ratio, krange = 4, runs = 100)
+```
+
+```{r Assigning Clusters}
+Data_AVG_Clusters <- mutate(Data_AVG,  M_Cluster = k_m_4[["cluster"]], N = 1)
+Data_M_Clusters <- select(Data_AVG_Clusters, 1, 2, 9, 10, 11)
+```
+
+```{r Main Metrics by Cluster}
+T1 <- Data_M_Clusters %>%
+ group_by(M_Cluster) %>%
+ summarize(M_Ratio_AVG = round(mean(M_Ratio, na.rm = T),1), 
+           M_Ratio_Sd = round(sd(M_Ratio, na.rm = T),1),
+           Imports = round(sum(Imports_AVG),0),
+           Imports_Perc = round(100*sum(Imports_AVG)/sum(Data_AVG$Imports_AVG),1),
+           GDP = round(sum(GDP_AVG),0),
+           GDP_Perc = round(100*sum(GDP_AVG)/sum(Data_AVG$GDP_AVG),1),
+           Countries_N = sum(N),
+           Countries_Perc = round(100*sum(N)/212,1))
+
+T1
+```
+
+```{r Plots comparison of clusters, fig.height=10, fig.width=10}
+
+P005 <- Data_M_Clusters |>
+#filter(!is.na(sex)) |>
+ggplot(aes(y = M_Ratio,
+x = M_Cluster,
+colour = M_Cluster, show.legend = FALSE)) +
+#  geom_boxplot(show.legend = FALSE) +
+  geom_quasirandom(dodge.width = 1, show.legend = FALSE) +
+  labs(title = "Distribution of Imports Ratio by Cluster", x = NULL)
+
+P006 <- ggplot(T1, aes(x = M_Cluster, y = Countries_Perc, colour = M_Cluster)) + geom_bar(stat = "sum", show.legend = FALSE) #+
+
+P007 <- ggplot(T1, aes(x = M_Cluster, y = GDP_Perc, colour = M_Cluster)) + geom_bar(stat = "sum", show.legend = FALSE)
+
+
+
+(P005 | P004) / (P006 | P007) +
+# add tags and main title
+plot_annotation(tag_levels = 'A',
+title = 'Main Metrics Summary by Clusters')
+```
+
+Previous Plots show that the Imports Ratio by Country can be clustered in 4 groups much more homogeneous . In fact, whilst the general distribution has Standard Deviation = 28%, The Average St. Deviation by Clusteris around 8.5%. Here below some relevant details by cluster:
+
+Cluster 3: The largest one in all senses. It concentrates 46% of countries (97 countries), 90% of global GDP and 73% of Global imports. Their average imports ratio is 29% with a St Deviation of 7.5%.
+
+Clusters 1 and 4: After cluster 3, clusters 1 and 4 concentrate the highest number of countries (36% and 15%), but with a very small GDP share (6% and 3% respectively) . Their average imports ratios are higher than for Cluster 3 (54% and 84.% respectively).
+
+Cluster2: This is the smallest one in therms of number of countries (6), GDP (0.9%) and Imports (5%), however it has the worldwide highest imports ratio (160%).
+
+## 4.1. Top Countries with Highest Import Ratios by Cluster
+
+```{r}
+Data_AVG_Plots <- mutate(Data_AVG_Clusters, Countries = Country_names$Country)
+```
+
+```{r}
+Data_AVG_Cl01 <- Data_AVG_Plots %>% filter(M_Cluster==1) %>% arrange(desc(M_Ratio))
+Data_AVG_Cl02 <- Data_AVG_Plots %>% filter(M_Cluster==2) %>% arrange(desc(M_Ratio))
+Data_AVG_Cl03 <- Data_AVG_Plots %>% filter(M_Cluster==3) %>% arrange(desc(M_Ratio))
+Data_AVG_Cl04 <- Data_AVG_Plots %>% filter(M_Cluster==4) %>% arrange(desc(M_Ratio))
+```
+
+Top Countries Cluster 1 (Many Countries but Small GDP):
+
+```{r Top Countries Cl01}
+T_Cl01 <- select(Data_AVG_Cl01[1:5,], 9, 2, 1, 8)
+T_Cl01
+
+```
+
+Top Countries Cluster 2 (Few Countries but with the Highest Imports Ratio):
+
+```{r}
+
+T_Cl02 <- select(Data_AVG_Cl02[1:5,], 9, 2, 1, 8)
+T_Cl02
+```
+
+Top Countries Cluster 3 (The biggest One in Terms of Number of Countries and GDP Concentration):
+
+```{r}
+T_Cl03 <- select(Data_AVG_Cl03[1:5,], 9, 2, 1, 8)
+T_Cl03
+```
+
+Top Countries Cluster 4 (Many Countries but Small GDP):
+
+```{r }
+T_Cl04 <- select(Data_AVG_Cl04[1:5,], 9, 2, 1, 8)
+T_Cl04
+```
+
+## 5. Country Comparison
+
+After spotting that the countries can be clustered accordingly to their imports, the next question would be, what is in common between the countries clustered in the same group? would it be their economic structure enough to explain their imports patterns?
+
+To find out some hints about it, it wasperformedthe following PCA analysis:
+
+```{r}
+Data_Ratios <- mutate(Data_AVG_Plots, 
+                      GDP_Percent = 100*(GDP_AVG / sum(GDP_AVG)),
+                      Imports_Ratio = 100*(Imports_AVG/GDP_AVG),
+                      Manufact_Ratio = 100*(Manufact_AVG/GDP_AVG),
+                      Minery_Ratio = 100*(Minery_Ut_AVG/GDP_AVG),
+                      Agric_Ratio = 100*(Agric_AVG/GDP_AVG),
+                      Services_Ratio = 100*(Services_AVG/GDP_AVG),
+                      Other_Ratio = 100*(Other_AVG/GDP_AVG),
+                      Population_Percent = 100*(Population_AVG / sum(Population_AVG)))
+```
+
+```{r}
+Data_Ratios <- replace_na(Data_Ratios, list(Agric_Ratio = 0))
+```
+
+```{r}
+Data_Ratios <- select(Data_Ratios,
+                      M_Cluster,
+                      GDP_Percent,
+                      Imports_Ratio,
+                      Manufact_Ratio,
+                      Minery_Ratio,
+                      Agric_Ratio,
+                      Services_Ratio,
+                      Other_Ratio,
+                      Population_Percent)
+
+```
+
+```{r Modeling by Cluster}
+
+Linear_Mod_Gral <- Data_Ratios |>
+lm(Imports_Ratio ~ GDP_Percent + 
+     Manufact_Ratio +
+     Minery_Ratio +
+     Agric_Ratio +
+     Services_Ratio +
+     Other_Ratio +
+     Population_Percent, data = _) |>
+summary()
+
+Linear_Mod_Cl01 <- filter(Data_Ratios, M_Cluster == 1) |>
+lm(Imports_Ratio ~ GDP_Percent + 
+     Manufact_Ratio +
+     Minery_Ratio +
+     Agric_Ratio +
+     Services_Ratio +
+     Other_Ratio +
+     Population_Percent, data = _) |>
+summary()
+
+Linear_Mod_Cl02 <- filter(Data_Ratios, M_Cluster == 2) |>
+lm(Imports_Ratio ~ GDP_Percent + 
+     Manufact_Ratio +
+     Minery_Ratio +
+     Agric_Ratio +
+     Services_Ratio +
+     Other_Ratio +
+     Population_Percent, data = _) |>
+summary()
+
+Linear_Mod_Cl03 <- filter(Data_Ratios, M_Cluster == 3) |>
+lm(Imports_Ratio ~ GDP_Percent + 
+     Manufact_Ratio +
+     Minery_Ratio +
+     Agric_Ratio +
+     Services_Ratio +
+     Other_Ratio +
+     Population_Percent, data = _) |>
+summary()
+
+Linear_Mod_Cl04 <- filter(Data_Ratios, M_Cluster == 4) |>
+lm(Imports_Ratio ~ GDP_Percent + 
+     Manufact_Ratio +
+     Minery_Ratio +
+     Agric_Ratio +
+     Services_Ratio +
+     Other_Ratio +
+     Population_Percent, data = _) |>
+summary()
+
+Models_Results <- tibble(
+  Radj = c("Gral", "Cl01","Cl02","Cl03","Cl04"),
+  Value = c(round(Linear_Mod_Gral$adj.r.squared,3),
+        round(Linear_Mod_Cl01$adj.r.squared,3),
+        round(Linear_Mod_Cl02$adj.r.squared,3),
+        round(Linear_Mod_Cl03$adj.r.squared,3),
+        round(Linear_Mod_Cl04$adj.r.squared,3)))
+
+Models_Results
+
+
+
+```
+
+The poor results of Linear Models built at cluster level suggest that the GDP structure is not enough to explain imports behavior.
+
+```{r}
+Data_PCA_Gral <- select(Data_Ratios, -1, -3)
+Data_PCA_Cl01 <- select(filter(Data_Ratios, M_Cluster == 1), -1, -3)
+Data_PCA_Cl02 <- select(filter(Data_Ratios, M_Cluster == 2), -1, -3, -8)
+Data_PCA_Cl03 <- select(filter(Data_Ratios, M_Cluster == 3), -1, -3)
+Data_PCA_Cl04 <- select(filter(Data_Ratios, M_Cluster == 4), -1, -3)
+```
+
+```{r}
+PCA_Gral <- princomp(Data_PCA_Gral)
+PCA_Cl01 <- princomp(Data_PCA_Cl01)
+PCA_Cl02 <- princomp(Data_PCA_Cl02)
+PCA_Cl03 <- princomp(Data_PCA_Cl03)
+PCA_Cl04 <- princomp(Data_PCA_Cl04)
+```
+
+```{r fig.height=15, fig.width=10}
+
+(fviz_pca_ind(PCA_Gral) / (fviz_pca_ind(PCA_Cl01) | fviz_pca_ind(PCA_Cl01)) / (fviz_pca_ind(PCA_Cl03) | fviz_pca_ind(PCA_Cl04))) + 
+# add tags and main title
+plot_annotation(tag_levels = 'A',
+title = 'PCA Comparison by Cluster')
+
+```
+
+PCA suggests that GDP structure follows a notorious pattern with 3 type of countries: the ones dedicated mainly to nminery, mostly oil (top left side), the ones dedicated to mostly to industrial or services activities (mid right side) , and the rest (bottom left)
+
+In the other hand, the combination of clusters with PCA, suggests that there is a notorious difference in the GDP structure of countries assigned to cluster 3 (the biggest one) respect of the other clusters, however it seems this difference is not enough to explain imports considering only the structure of GDP
+
+## 6. Takeaways:
+
+General average of imports ratio respect of GDP is 50%, however, after grouping countries accordingly to their similarities (in terms of imports) It was spotted that the ratio of countries with the biggest share in GDP is 29%
+
+PCA allows to visualize the distribution of countries by economic activities.In the same way, being Miner and industry + services n the most relevant ones, however, it is not enough to estimate imports

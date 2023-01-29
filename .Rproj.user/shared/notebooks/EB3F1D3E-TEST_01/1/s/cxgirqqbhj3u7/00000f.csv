@@ -1,0 +1,2 @@
+"0",""
+"0","Data_M_Year <- mutate(Data_M_Year, M_Ratio = 100 * (Imports_Tot / GDP_Tot))"

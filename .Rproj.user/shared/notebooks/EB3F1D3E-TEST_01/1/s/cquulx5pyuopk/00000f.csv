@@ -1,0 +1,3 @@
+"0","fviz_nbclust(Data_M_Ratio, kmeans, method = ""wss"") +"
+"0"," labs(subtitle = ""Elbow method suggests 4 clusters"")"
+"0",""

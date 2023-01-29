@@ -1,0 +1,1 @@
+"0","Data02 <- filter(Data01, YEAR>2009, YEAR<2020)"

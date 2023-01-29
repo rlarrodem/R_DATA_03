@@ -1,0 +1,2 @@
+"0","Country_names <- select(Data_AVG, ID_COUNTRY, COUNTRY_2)"
+"0","Data_AVG <- select(Data_AVG, -COUNTRY_2)"

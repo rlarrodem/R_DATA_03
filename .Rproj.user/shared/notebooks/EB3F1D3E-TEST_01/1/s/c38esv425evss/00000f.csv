@@ -1,0 +1,2 @@
+"0","Data_AVG_Clusters <- mutate(Data_AVG,  M_Cluster = k_m_4[[""cluster""]], N = 1)"
+"0","Data_M_Clusters <- select(Data_AVG_Clusters, 1, 2, 9, 10, 11)"
